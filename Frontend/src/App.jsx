@@ -5,6 +5,7 @@ import Register from './Authentication/Register'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
 import ManagerDash from './pages/ManagerDashboard';
+import Home from './pages/Home';
 
 axios.defaults.withCredentials=true;
 function App() {
@@ -20,6 +21,8 @@ function App() {
         setUser(res.data);
       }catch(err)
       {
+        console.error(err.message);
+        
         setUser(null);
         
       }finally{
@@ -46,7 +49,8 @@ if(loading)
   return (
     <BrowserRouter>
     <Routes>
-      <Route path="/" element={<Login setUser={setUser} />} />
+      <Route path="/" element={<Home/>} />
+      <Route path="/home" element={<Home/>}/>
       <Route path="/login" element={<Login setUser={setUser} />} />
       <Route path="/register" element={<Register setUser={setUser}/>}/>
       <Route path="manager-dashboard" element={<ManagerDash/>} />
