@@ -51,6 +51,7 @@ if(loading)
     <Routes>
       <Route path="/" element={<Home/>} />
       <Route path="/home" element={<Home/>}/>
+      <Route path="/map" element={<Map/>}/>
       <Route path="/login" element={<Login setUser={setUser} />} />
       <Route path="/register" element={<Register setUser={setUser}/>}/>
       <Route path="manager-dashboard" element={<ManagerDash/>} />

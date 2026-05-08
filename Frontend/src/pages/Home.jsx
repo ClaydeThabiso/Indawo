@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
+import LocationTracker from '../components/locationTracker';
 
 // Updated navigation tailored to Eskuz
 const navigation = [
@@ -17,6 +18,7 @@ export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
+   
     <div className="bg-slate-50 min-h-screen">
       <header className="absolute inset-x-0 top-0 z-50">
         <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
@@ -161,7 +163,10 @@ export default function Home() {
             className="relative left-[calc(50%+3rem)] aspect-1155/678 w-144.5 -translate-x-1/2 bg-linear-to-tr from-[#FDBA31] to-[#1D4A79] opacity-20 sm:left-[calc(50%+36rem)] sm:w-288.75"
           />
         </div>
+        <LocationTracker/>
       </main>
+      
     </div>
+     
   )
 }
