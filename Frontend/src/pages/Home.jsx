@@ -22,7 +22,7 @@ export default function Home() {
         <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5 flex items-center">
-              <span className="sr-only">Eskuz</span>
+              <span className="sr-only">Indawo</span>
               {/* Text-based logo mimicking your poster design */}
               <div className="bg-[#1D4A79] px-3 py-1 rounded shadow-sm">
                 <span className="text-2xl font-extrabold tracking-tight text-white">Indawo</span>
