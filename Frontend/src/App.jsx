@@ -11,6 +11,7 @@ import Map from './pages/map'
 axios.defaults.withCredentials=true;
 function App() {
 
+  // eslint-disable-next-line no-unused-vars
   const [user,setUser]=useState(null);
 
   const [loading,setLoading]=useState(true);
