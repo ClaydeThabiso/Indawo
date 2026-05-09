@@ -24,7 +24,7 @@ function Login({ setUser }) {
            navigate("/admin-dashboard"); 
         } else {
            // Route regular contributors straight to the map to start earning points!
-           navigate("/map"); 
+           navigate("/contributor-dashboard"); 
         }
     } catch(err) {
         alert("Invalid login details");

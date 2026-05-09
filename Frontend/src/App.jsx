@@ -7,6 +7,8 @@ import axios from 'axios'
 import AdminDashboard from './pages/AdminDashboard'
 import Home from './pages/Home';
 import Map from './pages/map'
+import ContributorDashboard from './pages/ContributorDashboard'
+import AddBusiness from './pages/AddBusines';
 
 axios.defaults.withCredentials=true;
 function App() {
@@ -57,6 +59,8 @@ if(loading)
       <Route path="/login" element={<Login setUser={setUser} />} />
       <Route path="/register" element={<Register setUser={setUser}/>}/>
       <Route path="/admin-dashboard" element={<AdminDashboard/>} />
+      <Route path="/contributor-dashboard" element={<ContributorDashboard/>}/>
+      <Route path="/add-business" element={<AddBusiness/>} />
     </Routes>
     </BrowserRouter>
   )
