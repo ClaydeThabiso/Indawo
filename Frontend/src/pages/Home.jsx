@@ -6,7 +6,6 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
 import LocationTracker from '../components/locationTracker';
 
-// Updated navigation tailored to Eskuz
 const navigation = [
   { name: 'The Map', href: '/map' },
   { name: 'How It Works', href: '#how-it-works' },
@@ -163,7 +162,6 @@ export default function Home() {
             className="relative left-[calc(50%+3rem)] aspect-1155/678 w-144.5 -translate-x-1/2 bg-linear-to-tr from-[#FDBA31] to-[#1D4A79] opacity-20 sm:left-[calc(50%+36rem)] sm:w-288.75"
           />
         </div>
-        <LocationTracker/>
       </main>
       
     </div>
