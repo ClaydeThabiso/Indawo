@@ -4,7 +4,7 @@ import Login  from './Authentication/Login'
 import Register from './Authentication/Register'
 import { useEffect, useState } from 'react'
 import axios from 'axios'
-import ManagerDash from './pages/ManagerDashboard';
+import AdminDashboard from './pages/AdminDashboard'
 import Home from './pages/Home';
 import Map from './pages/map'
 
@@ -56,7 +56,7 @@ if(loading)
       <Route path="/map" element={<Map/>}/>
       <Route path="/login" element={<Login setUser={setUser} />} />
       <Route path="/register" element={<Register setUser={setUser}/>}/>
-      <Route path="manager-dashboard" element={<ManagerDash/>} />
+      <Route path="/admin-dashboard" element={<AdminDashboard/>} />
     </Routes>
     </BrowserRouter>
   )

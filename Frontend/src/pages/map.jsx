@@ -3,7 +3,6 @@ import axios from "axios";
 import LocationTracker from "../components/locationTracker";
 import BusinessCard from "../components/BusinessCard";
 
-// MOCK DATA: This mimics what your API will eventually send
 
 function Map() {
   const [businesses, setBusinesses] = useState([]);
@@ -79,7 +78,7 @@ function Map() {
         </p>
         <LocationTracker onLocationFound={(lat, lng) => setUserLocation({ lat, lng })}/>
       </div>
-      
+
       <div className="px-6 mt-6 overflow-x-auto pb-4 hide-scrollbar">
         <div className="flex space-x-3">
           {categories.map((category) => (
