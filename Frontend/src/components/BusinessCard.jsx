@@ -1,4 +1,15 @@
 const BusinessCard = ({ business }) => {
+  // This function takes the business coordinates and opens Google Maps
+  const handleOpenMap = () => {
+    if (business.lat && business.lng) {
+      // Creates a Google Maps link with a pin at the exact latitude & longitude
+      const mapUrl = `https://www.google.com/maps?q=${business.lat},${business.lng}`;
+      window.open(mapUrl, "_blank"); // Opens in a new tab or the Maps app on mobile
+    } else {
+      alert("Coordinates not available for this business yet.");
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
       <div className="h-40 bg-gray-200 relative">
@@ -21,7 +32,11 @@ const BusinessCard = ({ business }) => {
           <span className="text-xs font-medium text-gray-400 flex items-center">
             <span className="mr-1">📍</span> {business.distance} km away
           </span>
-          <button className="text-xs font-bold text-[#1D4A79] border border-[#1D4A79] px-3 py-1 rounded-lg hover:bg-[#1D4A79] hover:text-white transition-colors">
+          
+          <button 
+            onClick={handleOpenMap}
+            className="text-xs font-bold text-[#1D4A79] border border-[#1D4A79] px-3 py-1 rounded-lg hover:bg-[#1D4A79] hover:text-white transition-colors cursor-pointer"
+          >
             View on Map
           </button>
         </div>

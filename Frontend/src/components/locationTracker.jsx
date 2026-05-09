@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const LocationTracker = () => {
+const LocationTracker = ({onLocationFound}) => {
   const [position, setPosition] = useState({ lat: null, lng: null });
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState("Initializing...");
@@ -17,6 +17,7 @@ const LocationTracker = () => {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         setPosition({ lat: latitude, lng: longitude });
+        if (onLocationFound) onLocationFound(latitude, longitude);
         setStatus("Coordinates acquired...");
 
         try {
