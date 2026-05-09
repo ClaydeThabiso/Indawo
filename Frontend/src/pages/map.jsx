@@ -1,36 +1,40 @@
-
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 import LocationTracker from "../components/locationTracker";
 import BusinessCard from "../components/BusinessCard";
+import { Description } from '@headlessui/react';
+import { BellSnoozeIcon } from '@heroicons/react/16/solid';
 
 // MOCK DATA: This mimics what your API will eventually send
-const MOCK_BUSINESSES = [
-  {
-    id: 1,
-    name: "Mama's Kitchen",
-    description: "Best Kota and pap in the area. Open for lunch and dinner.",
-    category: "Street Food",
-    distance: "0.4",
-    imageUrl: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400"
-  },
-  {
-    id: 2,
-    name: "Precision Fades",
-    description: "Professional barber services. Fades, beard trims, and styling.",
-    category: "Salon & Barber",
-    distance: "1.2",
-    imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=400"
-  },
-  {
-    id: 3,
-    name: "Lindiwe's Spaza",
-    description: "Convenience store for all your daily essentials and airtime.",
-    category: "Spaza Shop",
-    distance: "2.1",
-    imageUrl: "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400"
-  }
-];
+ 
 
 function Map() {
+
+    const [businesses,setBusinesses]= useState([])
+    const [loading,setLoading]=useState(true)
+    const[error ,setError]=useState(null)
+
+    useEffect(()=>{
+        const fetchBusinesses= async()=>{
+            try{
+                setLoading(true);
+                const result= await axios.get("http://localhost:5000/api/business/getBusiness", {withCredentials:true})
+
+                setBusinesses(result.data)
+                setLoading(false)
+
+            }catch(err)
+            {
+                console.error("Error while fetching businesses :",err);
+                setError("Could not load businesses in your area")
+                setLoading(false)
+
+            }
+        }
+        fetchBusinesses()
+
+    },[])
+
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
       {/* 1. Header & Location Sync */}
@@ -49,8 +53,14 @@ function Map() {
 
         {/* The Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_BUSINESSES.map((biz) => (
-            <BusinessCard key={biz.id} business={biz} />
+          {businesses.map((biz) => (
+            <BusinessCard key={biz.id} business={{
+                name:biz.name,
+                Description:biz.description,
+                category: biz.category_id,
+                distance :"0.0",
+                imageUrl: biz.image_url
+            }} />
           ))}
         </div>
       </div>
