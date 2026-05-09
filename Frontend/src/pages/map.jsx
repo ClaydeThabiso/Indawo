@@ -1,9 +1,9 @@
 import LocationTracker from "../components/locationTracker";
 
-function map()
+function Map()
 {
     return(
         <LocationTracker/>
     )
 }
-export default map;
+export default Map;

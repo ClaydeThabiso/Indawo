@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import ManagerDash from './pages/ManagerDashboard';
 import Home from './pages/Home';
+import Map from './pages/map'
 
 axios.defaults.withCredentials=true;
 function App() {
