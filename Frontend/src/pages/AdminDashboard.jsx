@@ -8,7 +8,7 @@ function AdminDashboard() {
   // 1. Fetch the pending businesses when the page loads
   const fetchPending = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/businesses/pending", {
+      const res = await axios.get("http://localhost:5000/api/business/pending", {
         withCredentials: true
       });
       setPendingBusinesses(res.data);
@@ -26,7 +26,7 @@ function AdminDashboard() {
   // 2. The Approve Function
   const handleApprove = async (id) => {
     try {
-      await axios.put(`http://localhost:5000/api/businesses/approve/${id}`, {}, {
+      await axios.put(`http://localhost:5000/api/business/approve/${id}`, {}, {
         withCredentials: true
       });
       // Remove the approved business from the screen instantly

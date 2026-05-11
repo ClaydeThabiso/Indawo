@@ -1,3 +1,5 @@
+import MapIcon from "@heroicons/react/16/solid/esm/MapIcon";
+
 const BusinessCard = ({ business }) => {
   // This function takes the business coordinates and opens Google Maps
   const handleOpenMap = () => {
@@ -30,7 +32,7 @@ const BusinessCard = ({ business }) => {
         
         <div className="mt-4 flex items-center justify-between">
           <span className="text-xs font-medium text-gray-400 flex items-center">
-            <span className="mr-1">📍</span> {business.distance} km away
+            <span className="mr-1"><MapIcon/></span> {business.distance} km away
           </span>
           
           <button 

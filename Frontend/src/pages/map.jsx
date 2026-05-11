@@ -10,7 +10,7 @@ function Map() {
   const [userLocation, setUserLocation] = useState(null);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const categories = ["All", "Spaza Shop", "Salon / Barber", "Street / Fast Food", "Car Wash","Mechanic","Tavern / Shebeen","Internet Cafe / Printing","Tailor / Clothing"];
+  const categories = ["All", "Spaza Shop", "Salon & Barber", "Street Food & Fast Food", "Car Wash","Mechanic","Tavern / Shebeen","Internet Cafe / Printing","Tailor / Clothing"];
 
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 0;
