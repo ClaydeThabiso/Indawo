@@ -1,4 +1,5 @@
-import { MapPinIcon, UserCircleIcon } from '@heroicons/react/16/solid';
+import toast from 'react-hot-toast';
+import { MapPinIcon} from '@heroicons/react/16/solid'; 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -6,7 +7,8 @@ import axios from 'axios';
 function ContributorDashboard() {
   const navigate = useNavigate();
 
-  const [userStats, setUserStats] = useState({ name: "", approvedCount: 0, pendingCount: 0 });
+  // Added rejectedCount to our default state
+  const [userStats, setUserStats] = useState({ name: "", approvedCount: 0, pendingCount: 0, rejectedCount: 0 });
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,12 +30,30 @@ function ContributorDashboard() {
 
     fetchDashboardData();
   }, []);
+  const handleLogout = async () => {
+    try {
+      await axios.post("http://localhost:5000/api/auth/logout", {}, {
+        withCredentials: true 
+      });
+      toast.success("Logged out successfully");
+      navigate("/"); 
+    } catch (err) {
+      console.error("Failed to log out:", err);
+      toast.error("Could not log out. Please try again.");
+    }
+  };
 
-  // Helper function to make the database timestamp look nice (e.g., "Oct 12, 2023")
   const formatDate = (dateString) => {
     if (!dateString) return "Unknown date";
     const options = { month: 'short', day: 'numeric', year: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // HELPER: Get dynamic styles based on status
+  const getStatusBadge = (status) => {
+    if (status === 'approved') return { classes: 'bg-green-100 text-green-700', text: 'Live' };
+    if (status === 'rejected') return { classes: 'bg-red-100 text-red-700', text: 'Rejected' };
+    return { classes: 'bg-yellow-100 text-yellow-700', text: 'Pending' }; // Default
   };
 
   if (loading) {
@@ -51,8 +71,11 @@ function ContributorDashboard() {
       <div className="bg-[#1D4A79] px-6 pt-12 pb-24 rounded-b-[40px] shadow-lg">
         <div className="flex justify-between items-center text-white mb-6">
           <h1 className="text-2xl font-black italic">Indawo</h1>
-          <button className="bg-white/20 p-2 rounded-full hover:bg-white/30 transition">
-            <UserCircleIcon className="h-6 w-6"/>
+          <button 
+            onClick={handleLogout}
+           className="bg-white hover:bg-red-50 text-red-600 font-bold py-2 px-4 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200 shadow-sm"
+          >
+           Log Out
           </button>
         </div>
         <p className="text-blue-200 text-sm font-medium uppercase tracking-wider">Welcome Back</p>
@@ -69,15 +92,19 @@ function ContributorDashboard() {
         </button>
       </div>
 
-      {/* 3. Stats Row */}
-      <div className="px-6 mt-8 grid grid-cols-2 gap-4">
-        <div className="bg-green-50 border border-green-100 p-4 rounded-xl text-center shadow-sm">
-          <p className="text-3xl font-black text-green-600">{userStats.approvedCount}</p>
-          <p className="text-xs font-bold text-green-800 uppercase tracking-wide mt-1">Approved</p>
+      {/* 3. Stats Row (Now a 3-column grid!) */}
+      <div className="px-6 mt-8 grid grid-cols-3 gap-3">
+        <div className="bg-green-50 border border-green-100 py-3 rounded-xl text-center shadow-sm">
+          <p className="text-2xl font-black text-green-600">{userStats.approvedCount}</p>
+          <p className="text-[10px] font-bold text-green-800 uppercase tracking-wide mt-1">Approved</p>
         </div>
-        <div className="bg-yellow-50 border border-yellow-100 p-4 rounded-xl text-center shadow-sm">
-          <p className="text-3xl font-black text-yellow-600">{userStats.pendingCount}</p>
-          <p className="text-xs font-bold text-yellow-800 uppercase tracking-wide mt-1">Pending</p>
+        <div className="bg-yellow-50 border border-yellow-100 py-3 rounded-xl text-center shadow-sm">
+          <p className="text-2xl font-black text-yellow-600">{userStats.pendingCount}</p>
+          <p className="text-[10px] font-bold text-yellow-800 uppercase tracking-wide mt-1">Pending</p>
+        </div>
+        <div className="bg-red-50 border border-red-100 py-3 rounded-xl text-center shadow-sm">
+          <p className="text-2xl font-black text-red-600">{userStats.rejectedCount || 0}</p>
+          <p className="text-[10px] font-bold text-red-800 uppercase tracking-wide mt-1">Rejected</p>
         </div>
       </div>
 
@@ -91,22 +118,32 @@ function ContributorDashboard() {
           </div>
         ) : (
           <div className="space-y-3">
-            {submissions.map((sub) => (
-              <div key={sub.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
-                <div>
-                  <h4 className="font-bold text-gray-800 text-sm">{sub.name}</h4>
-                  {/* Using the date formatter here! */}
-                  <p className="text-xs text-gray-400 mt-0.5">{formatDate(sub.created_at)}</p>
+            {submissions.map((sub) => {
+              const badge = getStatusBadge(sub.status); // Call our helper function
+
+              return (
+                <div key={sub.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="font-bold text-gray-800 text-sm">{sub.name}</h4>
+                      <p className="text-xs text-gray-400 mt-0.5">{formatDate(sub.created_at)}</p>
+                    </div>
+                    <div>
+                      <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${badge.classes}`}>
+                        {badge.text}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* If it was rejected, show the reason below! */}
+                  {sub.status === 'rejected' && sub.rejection_reason && (
+                    <div className="mt-3 bg-red-50 p-2 rounded text-xs text-red-700 border border-red-100">
+                      <span className="font-bold">Reason:</span> {sub.rejection_reason}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wide ${
-                    sub.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {sub.status === 'approved' ? 'Live' : 'Pending'}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 
 import {BrowserRouter,Routes,Route} from 'react-router-dom'
+import { Toaster } from 'react-hot-toast';
 import Login  from './Authentication/Login'
 import Register from './Authentication/Register'
 import { useEffect, useState } from 'react'
@@ -9,7 +10,7 @@ import Home from './pages/Home';
 import Map from './pages/map'
 import ContributorDashboard from './pages/ContributorDashboard'
 import AddBusiness from './pages/AddBusines';
-
+import BottomNav from './components/BottomNav';
 axios.defaults.withCredentials=true;
 function App() {
 
@@ -51,7 +52,10 @@ if(loading)
 }
 
   return (
+    
     <BrowserRouter>
+    <Toaster position="top-center" />
+    <main className="pb-16">
     <Routes>
       <Route path="/" element={<Home/>} />
       <Route path="/home" element={<Home/>}/>
@@ -62,6 +66,8 @@ if(loading)
       <Route path="/contributor-dashboard" element={<ContributorDashboard/>}/>
       <Route path="/add-business" element={<AddBusiness/>} />
     </Routes>
+    </main>
+    <BottomNav />
     </BrowserRouter>
   )
 }

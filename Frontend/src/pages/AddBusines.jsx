@@ -48,22 +48,28 @@ function AddBusiness() {
           let finalImageUrl = "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400"; // Fallback image
 
           // NEW: If they selected a photo, upload it to Cloudinary first!
+          // NEW: If they selected a photo, upload it to Cloudinary first!
           if (imageFile) {
             setStatus("uploading");
             const formData = new FormData();
             formData.append("file", imageFile);
-            formData.append("upload_preset", "YOUR_UPLOAD_PRESET"); // ⚠️ CHANGE THIS
-            formData.append("cloud_name", "YOUR_CLOUD_NAME");       // ⚠️ CHANGE THIS
+            formData.append("upload_preset", "indawo_spots"); 
+            formData.append("cloud_name", "djfwbhewk");       
 
-            // Send to Cloudinary's API
-            const cloudinaryRes = await axios.post(
-              `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload`, // ⚠️ CHANGE THIS
-              formData
+            // THE FIX: Use 'fetch' instead of 'axios' to avoid sending local cookies to Cloudinary
+            const cloudinaryRes = await fetch(
+              `https://api.cloudinary.com/v1_1/djfwbhewk/image/upload`, 
+              {
+                method: "POST",
+                body: formData
+              }
             );
+            
+            const cloudinaryData = await cloudinaryRes.json();
+            
             // Grab the secure URL they give back
-            finalImageUrl = cloudinaryRes.data.secure_url; 
+            finalImageUrl = cloudinaryData.secure_url; 
           }
-
           setStatus("saving");
           
           const payload = {
@@ -101,6 +107,16 @@ function AddBusiness() {
 
   return (
     <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 bg-slate-50">
+      <div className="w-full max-w-md mx-auto mb-2">
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center text-gray-500 hover:text-[#1D4A79] font-bold text-sm transition-colors group"
+          aria-label="Go back to previous page"
+        >
+          <span className="mr-2 transform group-hover:-translate-x-1 transition-transform  lg:justify-start">←</span> 
+          Back
+        </button>
+      </div>
       <div className="sm:mx-auto sm:w-full sm:max-w-sm">
         <h2 className="mt-10 text-center text-3xl font-extrabold tracking-tight text-[#1D4A79]">
           Map a Business
