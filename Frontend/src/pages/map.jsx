@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import LocationTracker from "../components/locationTracker";
 import BusinessCard from "../components/BusinessCard";
+import { Link } from 'react-router-dom'
 
 
 function Map() {
@@ -67,16 +68,25 @@ function Map() {
     .sort((a, b) => a.calculatedDistance - b.calculatedDistance);
 
   return (
+    
     <div className="bg-slate-50 min-h-screen pb-20">
       {/* 1. Header & Location Sync */}
+      
       <div className="px-6 pt-10">
+         <div className="hidden lg:flex lg:flex-1 lg:justify-end">
+            <Link to="/home" className="text-sm/6 font-bold text-[#1D4A79] hover:text-[#FDBA31] transition-colors">
+             Back to home <span aria-hidden="true">&rarr;</span>
+            </Link>
+          </div>
         <h1 className="text-[#1D4A79] text-3xl font-black italic mb-2">
           Discovery
         </h1>
         <p className="text-gray-500 text-sm mb-6">
           Finding unlisted businesses in your area.
         </p>
+       
         <LocationTracker onLocationFound={(lat, lng) => setUserLocation({ lat, lng })}/>
+          
       </div>
 
       <div className="px-6 mt-6 overflow-x-auto pb-4 hide-scrollbar">
