@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
-import LocationTracker from '../components/locationTracker';
 
 const navigation = [
   { name: 'The Map', href: '/map' },

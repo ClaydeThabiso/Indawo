@@ -6,14 +6,27 @@ function AddBusiness() {
   const [form, setForm] = useState({
     name: "",
     category_id: "1", 
-    address_name: "", // <-- NEW FIELD
+    address_name: "",
     description: "",
-    image_url: "",    // <-- NEW FIELD
   });
   
-  const [status, setStatus] = useState("idle"); 
+  // NEW: State to hold the actual image file and its preview
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  
+  const [status, setStatus] = useState("idle"); // idle, uploading, locating, saving, success, error
   const [errorMessage, setErrorMessage] = useState("");
   const navigate = useNavigate();
+
+  // NEW: Function to handle when a user picks a photo
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create a fake URL so we can show a preview on the screen instantly
+      setImagePreview(URL.createObjectURL(file)); 
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,19 +45,36 @@ function AddBusiness() {
         const lng = position.coords.longitude;
         
         try {
+          let finalImageUrl = "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400"; // Fallback image
+
+          // NEW: If they selected a photo, upload it to Cloudinary first!
+          if (imageFile) {
+            setStatus("uploading");
+            const formData = new FormData();
+            formData.append("file", imageFile);
+            formData.append("upload_preset", "YOUR_UPLOAD_PRESET"); // ⚠️ CHANGE THIS
+            formData.append("cloud_name", "YOUR_CLOUD_NAME");       // ⚠️ CHANGE THIS
+
+            // Send to Cloudinary's API
+            const cloudinaryRes = await axios.post(
+              `https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload`, // ⚠️ CHANGE THIS
+              formData
+            );
+            // Grab the secure URL they give back
+            finalImageUrl = cloudinaryRes.data.secure_url; 
+          }
+
           setStatus("saving");
           
           const payload = {
             BusinessName: form.name,
             CategoryId: form.category_id,
-            AddressName: form.address_name, 
+            AddressName: form.address_name,
             Description: form.description,
+            ImageURl: finalImageUrl, // Send the real Cloudinary link to your database!
             lat: lat,
             lng: lng,
-            // If they don't provide an image, we use a nice default township placeholder
-            ImageURl: form.image_url || "https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400" 
           };
-          console.log("OUTGOING PAYLOAD:", payload);
 
           await axios.post("http://localhost:5000/api/business/addBusiness", payload, {
             withCredentials: true 
@@ -54,17 +84,17 @@ function AddBusiness() {
           
           setTimeout(() => {
             navigate("/map");
-          }, 3500);
+          }, 2500);
 
         } catch (err) {
           setStatus("error");
-          setErrorMessage(err.response?.data?.message || "Failed to save business to database.");
+          setErrorMessage(err.response?.data?.message || "Failed to save business.");
           console.error(err);
         }
       },
       (error) => {
         setStatus("error");
-        setErrorMessage("Could not get your location. Please enable GPS permissions.");
+        setErrorMessage("Could not get your location. Please enable GPS.");
       }
     );
   };
@@ -75,31 +105,55 @@ function AddBusiness() {
         <h2 className="mt-10 text-center text-3xl font-extrabold tracking-tight text-[#1D4A79]">
           Map a Business
         </h2>
-        <p className="text-center text-gray-500 mt-2 text-sm">
-          Stand in front of the shop and fill out the details below.
-        </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md bg-white p-8 shadow-sm rounded-xl border border-gray-100">
         
-        {/* The Gamified Success Message */}
         {status === "success" && (
-          <div className="mb-6 bg-gradient-to-r from-[#1D4A79] to-blue-800 p-6 rounded-xl text-center transform transition-all shadow-lg border-2 border-[#FDBA31]">
+          <div className="mb-6 bg-gradient-to-r from-[#1D4A79] to-blue-800 p-6 rounded-xl text-center shadow-lg border-2 border-[#FDBA31]">
             <div className="text-4xl mb-2">🏆</div>
             <h3 className="text-[#FDBA31] font-black text-xl mb-1">Location Secured!</h3>
             <p className="text-white text-sm font-medium">
-              You just mapped a new business!!!
+              You just mapped a new business and earned <span className="font-black text-[#FDBA31] text-lg bg-white bg-opacity-20 px-2 py-0.5 rounded">+50 Points</span>
             </p>
           </div>
         )}
+
         {status === "error" && (
           <div className="mb-6 bg-red-50 text-red-600 p-4 rounded-lg text-center text-sm font-bold border border-red-200">
-             {errorMessage}
+            ❌ {errorMessage}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 1. Name */}
+          
+          {/* NEW: The Image Upload Box */}
+          <div>
+            <label className="block text-sm font-bold text-[#1D4A79] mb-2">Shop Photo (Optional but helpful)</label>
+            <div className="mt-1 flex justify-center rounded-lg border border-dashed border-gray-400 px-6 py-8 hover:bg-gray-50 transition-colors relative overflow-hidden">
+              
+              {/* If they selected an image, show it as the background! */}
+              {imagePreview && (
+                <img src={imagePreview} alt="Preview" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+              )}
+
+              <div className="text-center relative z-10">
+                <span className="text-3xl mb-2 block">{imagePreview ? '📸' : '📁'}</span>
+                <div className="mt-4 flex text-sm leading-6 text-gray-600 justify-center">
+                  <label
+                    htmlFor="file-upload"
+                    className="relative cursor-pointer rounded-md bg-white px-3 py-1.5 font-bold text-[#1D4A79] focus-within:outline-none focus-within:ring-2 focus-within:ring-[#FDBA31] focus-within:ring-offset-2 hover:text-blue-800 shadow-sm border border-gray-200"
+                  >
+                    <span>{imagePreview ? 'Change Photo' : 'Upload a file'}</span>
+                    <input id="file-upload" name="file-upload" type="file" accept="image/*" className="sr-only" onChange={handleImageChange} disabled={status !== "idle" && status !== "error"} />
+                  </label>
+                </div>
+                <p className="text-xs leading-5 text-gray-500 mt-2 font-bold bg-white/80 px-2 rounded-full inline-block">PNG, JPG, GIF up to 5MB</p>
+              </div>
+            </div>
+          </div>
+
+          {/* ... The rest of your inputs (Name, Category, Address, Description) stay EXACTLY the same as before! */}
           <div>
             <label className="block text-sm font-bold text-[#1D4A79]">Business Name</label>
             <input
@@ -107,12 +161,10 @@ function AddBusiness() {
               className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#FDBA31] sm:text-sm"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Mama's Corner Spaza"
               disabled={status !== "idle" && status !== "error"}
             />
           </div>
 
-          {/* 2. Category */}
           <div>
             <label className="block text-sm font-bold text-[#1D4A79]">Category</label>
             <select
@@ -121,7 +173,7 @@ function AddBusiness() {
               onChange={(e) => setForm({ ...form, category_id: e.target.value })}
               disabled={status !== "idle" && status !== "error"}
             >
-              <option value="1">Spaza Shop</option>
+             <option value="1">Spaza Shop</option>
               <option value="2">Salon & Barber</option>
               <option value="3">Street Food & Fast Food</option>
               <option value="4">Car Wash</option>
@@ -132,7 +184,6 @@ function AddBusiness() {
             </select>
           </div>
 
-          {/* 3. Address / Landmark (NEW) */}
           <div>
             <label className="block text-sm font-bold text-[#1D4A79]">Street or Landmark</label>
             <input
@@ -140,35 +191,19 @@ function AddBusiness() {
               className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#FDBA31] sm:text-sm"
               value={form.address_name}
               onChange={(e) => setForm({ ...form, address_name: e.target.value })}
-              placeholder="e.g. 123 Vilakazi St, or 'Next to the clinic'"
               disabled={status !== "idle" && status !== "error"}
             />
           </div>
 
-          {/* 4. Description */}
           <div>
-            <label className="block text-sm font-bold text-[#1D4A79]">Description (Optional)</label>
+            <label className="block text-sm font-bold text-[#1D4A79]">Description</label>
             <textarea
               rows="2"
               className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#FDBA31] sm:text-sm"
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="What do they sell?"
               disabled={status !== "idle" && status !== "error"}
             ></textarea>
-          </div>
-
-          {/* 5. Image URL (NEW) */}
-          <div>
-            <label className="block text-sm font-bold text-[#1D4A79]">Photo Link (Optional)</label>
-            <input
-              type="text"
-              className="mt-1 block w-full rounded-md border-0 py-2 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-[#FDBA31] sm:text-sm"
-              value={form.image_url}
-              onChange={(e) => setForm({ ...form, image_url: e.target.value })}
-              placeholder="Paste an image URL here..."
-              disabled={status !== "idle" && status !== "error"}
-            />
           </div>
 
           {/* Submit Button */}
@@ -179,6 +214,7 @@ function AddBusiness() {
           >
             {status === "idle" && "📍 Snap Location & Submit"}
             {status === "locating" && "🛰️ Getting GPS..."}
+            {status === "uploading" && "📷 Uploading Photo..."}
             {status === "saving" && "💾 Saving to Database..."}
             {status === "success" && "Done!"}
             {status === "error" && "Try Again"}
