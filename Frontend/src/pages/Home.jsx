@@ -4,8 +4,8 @@ import { useState } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
-import {HowItWorks} from '../components/HowItWorks'
-import { AboutUs} from '../components/AboutUs'
+import HowItWorks from '../components/HowItWorks'
+import  AboutUs  from '../components/AboutUs'
 
 const navigation = [
   { name: 'The Map', href: '/map' },
@@ -20,7 +20,7 @@ export default function Home() {
   return (
    
     <div className="bg-slate-50 min-h-screen">
-      <header className="absolute inset-x-0 top-0 z-50">
+     <header className="fixed inset-x-0 top-0 z-50 bg-slate-50/80 backdrop-blur-md border-b border-gray-100 transition-all">
         <nav aria-label="Global" className="flex items-center justify-between p-6 lg:px-8">
           <div className="flex lg:flex-1">
             <Link to="/" className="-m-1.5 p-1.5 flex items-center">
