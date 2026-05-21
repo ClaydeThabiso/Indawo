@@ -4,12 +4,14 @@ import { useState } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { Link } from 'react-router-dom'
+import {HowItWorks} from '../components/HowItWorks'
+import { AboutUs} from '../components/AboutUs'
 
 const navigation = [
   { name: 'The Map', href: '/map' },
   { name: 'How It Works', href: '#how-it-works' },
-  { name: 'Leaderboard', href: '/leaderboard' },
-  { name: 'About Us', href: '#about' },
+  { name: 'Leaderboard', href: '#leaderboard' },
+  { name: 'About Us', href: '#about-us' },
 ]
 
 export default function Home() {
@@ -147,6 +149,8 @@ export default function Home() {
             </div>
           </div>
         </div>
+        <HowItWorks/>
+        <AboutUs/>
         
         {/* Bottom Gradient Blob */}
         <div
