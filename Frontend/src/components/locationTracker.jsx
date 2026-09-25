@@ -53,7 +53,7 @@ const LocationTracker = ({onLocationFound}) => {
     <div className="max-w-md mx-auto mt-10 overflow-hidden rounded-2xl bg-white shadow-lg border border-gray-100">
       <div className="bg-[#1D4A79] p-4">
         <h3 className="text-white font-bold text-lg flex items-center">
-          <span className="mr-2">📍</span> Your Current Hub
+          <span className="mr-2"></span> Your Current Hub
         </h3>
       </div>
 

@@ -86,7 +86,7 @@ function Map() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {localBusinesses.map((biz) => (
-              <div 
+              <div
                 key={biz.id} 
                 onClick={() => handleBusinessClick(biz)}
                 className="cursor-pointer transform transition hover:-translate-y-1"
