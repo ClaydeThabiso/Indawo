@@ -21,7 +21,7 @@ function Register({ setUser }) {
         setUser(res.data.user); 
         // Since your backend automatically logs them in upon registration,
         // send them straight to the map to start contributing!
-        navigate("/map"); 
+        navigate("/login"); 
     } catch(err) {
         const errorMessage = err.response?.data?.message || "Registration failed. Please try again.";
         alert(errorMessage);
