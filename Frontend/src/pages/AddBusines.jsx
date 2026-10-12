@@ -94,7 +94,7 @@ function AddBusiness() {
           setStatus("success");
 
           setTimeout(() => {
-            navigate("/map");
+            navigate("/contributor-dashboard");
           }, 2500);
         } catch (err) {
           setStatus("error");

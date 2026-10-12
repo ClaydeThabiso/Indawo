@@ -133,6 +133,9 @@ function AdminDashboard() {
                       <span className="bg-[#FDBA31] text-[#1D4A79] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
                         {biz.category_name}
                       </span>
+                       <span className="bg-[#FDBA31] text-[#1D4A79] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                        {biz.address_name}
+                      </span>
                     </div>
                     <button 
                       onClick={() => { setSelectedBiz(biz); setIsRejecting(false); }}
