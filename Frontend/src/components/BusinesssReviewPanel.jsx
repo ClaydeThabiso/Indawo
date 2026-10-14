@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid } from '@heroicons/react/24/solid';
@@ -109,6 +110,16 @@ export default function BusinessReviewPanel({ business, isOpen, onClose }) {
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-full transition">
             <XMarkIcon className="w-6 h-6" />
           </button>
+        </div>
+
+        {/* Link to the full, shareable page */}
+        <div className="bg-white border-b border-gray-100 px-6 py-2 shrink-0">
+          <Link
+            to={`/business/${business.id}`}
+            className="text-sm font-bold text-[#1D4A79] hover:text-[#FDBA31] transition-colors"
+          >
+            Open full page <span aria-hidden="true">&rarr;</span>
+          </Link>
         </div>
 
         {/* SCROLLABLE CONTENT */}

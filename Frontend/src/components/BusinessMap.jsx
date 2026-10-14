@@ -21,7 +21,12 @@ const pinIcon = L.divIcon({
   </svg>`,
 });
 
-export default function BusinessMap({ businesses, userLocation, onSelect }) {
+export default function BusinessMap({
+  businesses,
+  userLocation,
+  onSelect,
+  heightClass = "h-[60vh] min-h-[320px]",
+}) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const clusterRef = useRef(null);
@@ -129,7 +134,7 @@ export default function BusinessMap({ businesses, userLocation, onSelect }) {
     <div className="relative z-0 rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
       <div
         ref={containerRef}
-        className="h-[60vh] min-h-[320px] w-full"
+        className={`${heightClass} w-full`}
         role="region"
         aria-label="Map of nearby businesses"
       />

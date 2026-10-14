@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import MapIcon from "@heroicons/react/16/solid/esm/MapIcon";
 
 const BusinessCard = ({ business }) => {
@@ -66,12 +67,21 @@ const BusinessCard = ({ business }) => {
             )}
           </span>
 
-          <button
-            onClick={handleOpenMap}
-            className="text-xs font-bold text-[#1D4A79] border border-[#1D4A79] px-3 py-1 rounded-lg hover:bg-[#1D4A79] hover:text-white transition-colors cursor-pointer"
-          >
-            View on Map
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/business/${business.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-xs font-bold text-white bg-[#1D4A79] border border-[#1D4A79] px-3 py-1 rounded-lg hover:bg-blue-900 transition-colors"
+            >
+              Details
+            </Link>
+            <button
+              onClick={handleOpenMap}
+              className="text-xs font-bold text-[#1D4A79] border border-[#1D4A79] px-3 py-1 rounded-lg hover:bg-[#1D4A79] hover:text-white transition-colors cursor-pointer"
+            >
+              View on Map
+            </button>
+          </div>
         </div>
       </div>
     </div>

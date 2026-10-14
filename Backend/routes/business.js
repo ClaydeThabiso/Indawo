@@ -272,7 +272,7 @@ route.get("/business-reviews/:business_id", async (req, res) => {
 
     // 1. Get all reviews joined with the users table so we can display their real names
     const reviewsList = await pool.query(
-      `SELECT r.id, r.rating, r.comment, r.created_at, u.name AS reviewer_name 
+      `SELECT r.id, r.rating, r.comment, r.created_at, u.first_name AS reviewer_name 
        FROM reviews r
        JOIN users u ON r.user_id = u.id
        WHERE r.business_id = $1
@@ -296,6 +296,126 @@ route.get("/business-reviews/:business_id", async (req, res) => {
   } catch (err) {
     console.error("GET REVIEWS ERROR:", err);
     return res.status(500).json({ message: "Could not retrieve reviews." });
+  }
+});
+// ---------------------------------------------------------------------------
+// Business detail page
+// ---------------------------------------------------------------------------
+
+// Parses ":id" and rejects anything that is not a positive whole number
+const parseId = (value) => {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+};
+
+const escapeHtml = (value = "") =>
+  String(value).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[c]));
+
+// GET: One approved business with its rating summary (public)
+route.get("/detail/:id", async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(404).json({ message: "Business not found." });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          b.id,
+          b.name AS business_name,
+          b.description,
+          b.address_name,
+          b.image_url,
+          b.created_at,
+          c.name AS category_name,
+          ST_Y(b.coordinates) AS lat,
+          ST_X(b.coordinates) AS lng,
+          COALESCE(r.avg_rating, 0) AS avg_rating,
+          COALESCE(r.review_count, 0) AS review_count
+       FROM businesses b
+       JOIN categories c ON b.category_id = c.id
+       LEFT JOIN (
+          SELECT business_id,
+                 ROUND(AVG(rating), 1)::float AS avg_rating,
+                 COUNT(*)::int AS review_count
+          FROM reviews
+          GROUP BY business_id
+       ) r ON r.business_id = b.id
+       WHERE b.id = $1 AND b.status = 'approved'`,
+      [id],
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Business not found." });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error("GET BUSINESS DETAIL ERROR:", err);
+    return res.status(500).json({ message: "Could not load this business." });
+  }
+});
+
+// GET: Link used for sharing. Chat apps such as WhatsApp read the preview
+// tags below (name, description, photo); people are sent on to the app.
+// Set CLIENT_URL in the server .env (for example https://indawo.co.za).
+route.get("/share/:id", async (req, res) => {
+  const clientUrl = (process.env.CLIENT_URL || "http://localhost:5173").replace(/\/+$/, "");
+  const id = parseId(req.params.id);
+
+  try {
+    let business = null;
+    if (id) {
+      const result = await pool.query(
+        `SELECT b.name, b.description, b.address_name, b.image_url, c.name AS category_name
+         FROM businesses b
+         JOIN categories c ON b.category_id = c.id
+         WHERE b.id = $1 AND b.status = 'approved'`,
+        [id],
+      );
+      business = result.rows[0] || null;
+    }
+
+    const target = business ? `${clientUrl}/business/${id}` : `${clientUrl}/map`;
+    const title = business ? `${business.name} on Indawo` : "Indawo";
+    const summary = business
+      ? `${business.category_name} at ${business.address_name}. ${business.description || ""}`
+      : "Discover and map the hidden economy in your community.";
+    const description = summary.trim().slice(0, 200);
+    const image =
+      business && typeof business.image_url === "string" && business.image_url.startsWith("https://")
+        ? business.image_url
+        : null;
+
+    res.status(business ? 200 : 404).type("html").send(`<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Indawo">
+<meta property="og:title" content="${escapeHtml(title)}">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${escapeHtml(target)}">
+${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ""}
+<meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}">
+<meta http-equiv="refresh" content="0;url=${escapeHtml(target)}">
+</head>
+<body>
+<p>Opening <a href="${escapeHtml(target)}">${escapeHtml(title)}</a>…</p>
+<script>location.replace(${JSON.stringify(target).replace(/</g, "\\u003c")});</script>
+</body>
+</html>`);
+  } catch (err) {
+    console.error("SHARE PAGE ERROR:", err);
+    return res.redirect(`${clientUrl}/map`);
   }
 });
 
