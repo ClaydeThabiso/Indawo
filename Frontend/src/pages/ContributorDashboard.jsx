@@ -3,6 +3,7 @@ import { MapPinIcon} from '@heroicons/react/16/solid';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Button } from '@headlessui/react';
 
 function ContributorDashboard() {
   const navigate = useNavigate();
@@ -71,13 +72,20 @@ function ContributorDashboard() {
       <div className="bg-[#1D4A79] px-6 pt-12 pb-24 rounded-b-[40px] shadow-lg">
         <div className="flex justify-between items-center text-white mb-6">
           <h1 className="text-2xl font-black italic">Indawo</h1>
+          <Button
+            onClick={()=> navigate('/map')}
+            className="bg-white hover:bg-blue-50 text-blue-600 font-bold py-2 px-4 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200 shadow-sm"
+            >
+              Go to the map
+            </Button>
           <button 
             onClick={handleLogout}
            className="bg-white hover:bg-red-50 text-red-600 font-bold py-2 px-4 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200 shadow-sm"
           >
            Log Out
           </button>
-        </div>
+          
+            </div>
         <p className="text-blue-200 text-sm font-medium uppercase tracking-wider">Welcome Back</p>
         <h2 className="text-white text-3xl font-bold">{userStats.name}</h2>
       </div>
