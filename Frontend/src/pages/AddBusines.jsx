@@ -231,8 +231,8 @@ function AddBusiness() {
               <option value="2">Salon & Barber</option>
               <option value="3">Street Food & Fast Food</option>
               <option value="4">Car Wash</option>
-              <option value="5">Mechanic & Tire Repair</option>
-              <option value="6">Tavern & Shebeen</option>
+              <option value="5">Mechanic r</option>
+              <option value="6">Tavern / Shebeen</option>
               <option value="7">Internet Cafe & Printing</option>
               <option value="8">Tailor & Clothing</option>
             </select>
