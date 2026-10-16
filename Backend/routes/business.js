@@ -419,4 +419,176 @@ ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ""}
   }
 });
 
+// Edit and resubmit a rejected business
+// Needs the columns from migrations/2026-10-14-resubmissions.sql
+// ---------------------------------------------------------------------------
+
+// How many times one business can be sent back after rejection
+const MAX_RESUBMITS = 3;
+
+// GET: The logged-in contributor's own submission, to fill the edit form
+route.get("/my-submission/:id", protect, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(404).json({ message: "Submission not found." });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT
+          id,
+          name AS business_name,
+          description,
+          category_id,
+          address_name,
+          image_url,
+          status,
+          rejection_reason,
+          resubmit_count,
+          ST_Y(coordinates) AS lat,
+          ST_X(coordinates) AS lng
+       FROM businesses
+       WHERE id = $1 AND submitted_by = $2`,
+      [id, req.user.id],
+    );
+
+    // Same answer for "does not exist" and "belongs to someone else"
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Submission not found." });
+    }
+
+    return res.json({ ...result.rows[0], max_resubmits: MAX_RESUBMITS });
+  } catch (err) {
+    console.error("GET MY SUBMISSION ERROR:", err);
+    return res.status(500).json({ message: "Could not load this submission." });
+  }
+});
+
+// PUT: Fix a rejected business and send it back for review
+route.put("/resubmit/:id", protect, async (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) {
+    return res.status(404).json({ message: "Submission not found." });
+  }
+
+  const { BusinessName, CategoryId, AddressName, Description, ImageURl, lat, lng } = req.body;
+
+  const name = String(BusinessName ?? "").trim();
+  const address = String(AddressName ?? "").trim();
+  const description = String(Description ?? "").trim();
+  const categoryId = Number(CategoryId);
+
+  if (!name || !address || !description || !Number.isInteger(categoryId)) {
+    return res.status(400).json({
+      message: "Name, category, street or landmark and description are all required.",
+    });
+  }
+  if (name.length > 120 || address.length > 200 || description.length > 1000) {
+    return res.status(400).json({ message: "One of the fields is too long." });
+  }
+
+  // Location is optional: leave it out to keep the original pin
+  const hasNewLocation = lat != null && lng != null;
+  const newLat = Number(lat);
+  const newLng = Number(lng);
+  if (
+    hasNewLocation &&
+    !(Number.isFinite(newLat) && Math.abs(newLat) <= 90 && Number.isFinite(newLng) && Math.abs(newLng) <= 180)
+  ) {
+    return res.status(400).json({ message: "The location is not valid." });
+  }
+
+  // Photo is optional: leave it out to keep the original
+  const newImage = ImageURl ? String(ImageURl) : null;
+  if (newImage && !newImage.startsWith("https://")) {
+    return res.status(400).json({ message: "The photo link is not valid." });
+  }
+
+  try {
+    const existing = await pool.query(
+      `SELECT id, status, resubmit_count, ST_Y(coordinates) AS lat, ST_X(coordinates) AS lng
+       FROM businesses
+       WHERE id = $1 AND submitted_by = $2`,
+      [id, req.user.id],
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: "Submission not found." });
+    }
+
+    const current = existing.rows[0];
+
+    if (current.status !== "rejected") {
+      return res.status(409).json({
+        message: "Only rejected submissions can be edited and resubmitted.",
+      });
+    }
+    if (current.resubmit_count >= MAX_RESUBMITS) {
+      return res.status(403).json({
+        message: `This business has already been resubmitted ${MAX_RESUBMITS} times.`,
+      });
+    }
+
+    const categoryCheck = await pool.query("SELECT id FROM categories WHERE id = $1", [categoryId]);
+    if (categoryCheck.rows.length === 0) {
+      return res.status(400).json({ message: "Invalid category" });
+    }
+
+    const finalLat = hasNewLocation ? newLat : Number(current.lat);
+    const finalLng = hasNewLocation ? newLng : Number(current.lng);
+
+    // Same duplicate rule as a new submission, ignoring this business itself
+    const duplicateCheck = await pool.query(
+      `SELECT id FROM businesses
+       WHERE LOWER(name) = LOWER($1)
+         AND id <> $4
+         AND ST_DWithin(
+             coordinates::geography,
+             ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography,
+             50
+         )`,
+      [name, finalLng, finalLat, id],
+    );
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({
+        message: "A business with this name has already been mapped at this location.",
+      });
+    }
+
+    // The status and owner checks are repeated here so two quick taps cannot
+    // resubmit twice. In an UPDATE, the right-hand side sees the old row, so
+    // last_rejection_reason keeps the reason before rejection_reason is cleared.
+    const updated = await pool.query(
+      `UPDATE businesses SET
+          name = $1,
+          description = $2,
+          category_id = $3,
+          address_name = $4,
+          image_url = COALESCE($5, image_url),
+          coordinates = ST_SetSRID(ST_MakePoint($6, $7), 4326),
+          status = 'pending',
+          last_rejection_reason = rejection_reason,
+          rejection_reason = NULL,
+          resubmit_count = resubmit_count + 1,
+          resubmitted_at = NOW()
+       WHERE id = $8 AND submitted_by = $9 AND status = 'rejected'
+       RETURNING id, name, status, resubmit_count`,
+      [name, description, categoryId, address, newImage, finalLng, finalLat, id, req.user.id],
+    );
+
+    if (updated.rows.length === 0) {
+      return res.status(409).json({
+        message: "This submission was already resubmitted.",
+      });
+    }
+
+    return res.json({
+      message: "Thanks. Your business was sent back for review.",
+      data: updated.rows[0],
+    });
+  } catch (err) {
+    console.error("RESUBMIT ERROR:", err);
+    return res.status(500).json({ message: "Could not resubmit this business." });
+  }
+});
 export default route;
