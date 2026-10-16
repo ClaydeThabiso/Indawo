@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import toast from 'react-hot-toast'; // The beautiful notification library!
+import toast from 'react-hot-toast'; 
 
 function AdminDashboard() {
-  const navigate = useNavigate(); // The navigation hook fix
+  const navigate = useNavigate(); 
 
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);

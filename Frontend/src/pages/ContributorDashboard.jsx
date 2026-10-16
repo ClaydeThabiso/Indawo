@@ -1,7 +1,7 @@
 import toast from 'react-hot-toast';
 import { MapPinIcon} from '@heroicons/react/16/solid'; 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import {Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from '@headlessui/react';
 
@@ -148,6 +148,27 @@ function ContributorDashboard() {
                     <div className="mt-3 bg-red-50 p-2 rounded text-xs text-red-700 border border-red-100">
                       <span className="font-bold">Reason:</span> {sub.rejection_reason}
                     </div>
+                  )}
+                  {/* Let the contributor fix it and send it back (up to 3 times) */}
+                  {sub.status === 'rejected' && (
+                    sub.resubmit_count < 3 ? (
+                      <Link
+                        to={`/edit-business/${sub.id}`}
+                        className="mt-3 flex items-center justify-center w-full bg-[#FDBA31] hover:bg-yellow-400 text-[#1D4A79] font-bold text-sm py-2 rounded-lg transition-colors"
+                      >
+                        Fix and resubmit
+                      </Link>
+                    ) : (
+                      <p className="mt-3 text-xs text-gray-500">
+                        Sent back 3 times already. You can map it again as a new spot.
+                      </p>
+                    )
+                  )}
+
+                  {sub.status === 'pending' && sub.resubmit_count > 0 && (
+                    <p className="mt-3 text-xs text-yellow-700">
+                      Resubmitted. Waiting for review.
+                    </p>
                   )}
                 </div>
               );

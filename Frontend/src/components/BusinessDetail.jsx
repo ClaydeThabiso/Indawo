@@ -4,7 +4,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import { StarIcon as StarOutline } from "@heroicons/react/24/outline";
-import BusinessMap from "../components/BusinessMap";
+import BusinessMap from "./BusinessMap";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
