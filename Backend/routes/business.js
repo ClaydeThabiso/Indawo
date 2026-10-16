@@ -135,10 +135,17 @@ route.get("/pending", async (req, res) => {
                 b.id, 
                 b.name AS business_name, 
                 b.description, 
-                c.name AS category_name 
+                c.name AS category_name,
+                b.address_name,
+                b.image_url,
+                ST_Y(b.coordinates) AS lat,
+                ST_X(b.coordinates) AS lng,
+                b.resubmit_count,
+                b.last_rejection_reason
             FROM businesses b
             JOIN categories c ON b.category_id = c.id
             WHERE b.status = 'pending'
+            ORDER BY COALESCE(b.resubmitted_at, b.created_at) ASC
         `);
         return res.json(result.rows);
     } catch(err) {
@@ -184,7 +191,7 @@ route.get("/my-impact", protect, async (req, res) => {
 
     // 2. Get all businesses submitted by this specific user
     const submissionsQuery = await pool.query(
-      "SELECT id, name, status,rejection_reason, created_at FROM businesses WHERE submitted_by = $1 ORDER BY created_at DESC",
+      "SELECT id, name, status, rejection_reason, resubmit_count, created_at FROM businesses WHERE submitted_by = $1 ORDER BY created_at DESC",
       [userId]
     );
     const submissions = submissionsQuery.rows;
@@ -272,7 +279,7 @@ route.get("/business-reviews/:business_id", async (req, res) => {
 
     // 1. Get all reviews joined with the users table so we can display their real names
     const reviewsList = await pool.query(
-      `SELECT r.id, r.rating, r.comment, r.created_at, u.first_name AS reviewer_name 
+      `SELECT r.id, r.rating, r.comment, r.created_at, u.name AS reviewer_name 
        FROM reviews r
        JOIN users u ON r.user_id = u.id
        WHERE r.business_id = $1
@@ -298,6 +305,7 @@ route.get("/business-reviews/:business_id", async (req, res) => {
     return res.status(500).json({ message: "Could not retrieve reviews." });
   }
 });
+
 // ---------------------------------------------------------------------------
 // Business detail page
 // ---------------------------------------------------------------------------
@@ -419,6 +427,7 @@ ${image ? `<meta property="og:image" content="${escapeHtml(image)}">` : ""}
   }
 });
 
+// ---------------------------------------------------------------------------
 // Edit and resubmit a rejected business
 // Needs the columns from migrations/2026-10-14-resubmissions.sql
 // ---------------------------------------------------------------------------
@@ -591,4 +600,5 @@ route.put("/resubmit/:id", protect, async (req, res) => {
     return res.status(500).json({ message: "Could not resubmit this business." });
   }
 });
+
 export default route;
