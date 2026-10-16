@@ -8,6 +8,7 @@ import axios from 'axios'
 import AdminDashboard from './pages/AdminDashboard'
 import Home from './pages/Home';
 import Map from './pages/map'
+import EditBusiness from './pages/EditBusiness'
 import BusinessDetail from './components/BusinessDetail'
 import ContributorDashboard from './pages/ContributorDashboard'
 import AddBusiness from './pages/AddBusines';
@@ -67,6 +68,7 @@ if(loading)
       <Route path="/contributor-dashboard" element={<ContributorDashboard/>}/>
       <Route path="/add-business" element={<AddBusiness/>} />
       <Route path="/business/:id" element={<BusinessDetail />} />
+      <Route path="/edit-business/:id" element={<EditBusiness />} />
     </Routes>
     </main>
     <BottomNav />
