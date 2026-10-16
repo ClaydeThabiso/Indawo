@@ -601,4 +601,262 @@ route.put("/resubmit/:id", protect, async (req, res) => {
   }
 });
 
+
+// Report a listing or review, and the admin queue that handles reports
+// Needs the table and column from migrations/2026-10-16-reports.sql
+// ---------------------------------------------------------------------------
+ 
+// Checks the role in the database, so it does not depend on what `protect`
+// puts on req.user. Use it after `protect` on any admin-only route.
+const adminOnly = async (req, res, next) => {
+  try {
+    const result = await pool.query("SELECT role FROM users WHERE id = $1", [req.user.id]);
+    if (result.rows[0]?.role !== "admin") {
+      return res.status(403).json({ message: "Admins only." });
+    }
+    next();
+  } catch (err) {
+    console.error("ADMIN CHECK ERROR:", err);
+    return res.status(500).json({ message: "Could not check permissions." });
+  }
+};
+ 
+const REPORT_REASONS = {
+  business: ["closed", "wrong_location", "wrong_info", "duplicate", "inappropriate", "other"],
+  review: ["abusive", "spam", "fake", "wrong_business", "other"],
+};
+ 
+// Shown to the contributor when a reported listing is taken down
+const BUSINESS_TAKEDOWN_TEXT = {
+  closed: "Reported as closed",
+  wrong_location: "Reported as being in the wrong place",
+  wrong_info: "Reported as having wrong details",
+  duplicate: "Reported as a duplicate",
+  inappropriate: "Reported as inappropriate",
+  other: "Reported by the community",
+};
+ 
+const MAX_REPORTS_PER_DAY = 10;
+ 
+// POST: Report a business or a review (logged-in users only)
+route.post("/report", protect, async (req, res) => {
+  const { target_type, target_id, reason, details } = req.body;
+  const targetType = target_type === "review" ? "review" : target_type === "business" ? "business" : null;
+  const targetId = parseId(target_id);
+  const note = String(details ?? "").trim();
+ 
+  if (!targetType || !targetId) {
+    return res.status(400).json({ message: "Choose what you are reporting." });
+  }
+  if (!REPORT_REASONS[targetType].includes(reason)) {
+    return res.status(400).json({ message: "Choose a reason for your report." });
+  }
+  if (note.length > 500) {
+    return res.status(400).json({ message: "Please keep the details under 500 characters." });
+  }
+  if (reason === "other" && note.length < 5) {
+    return res.status(400).json({ message: "Please tell us what is wrong." });
+  }
+ 
+  try {
+    // Stop one person from flooding the queue
+    const recent = await pool.query(
+      `SELECT COUNT(*)::int AS n FROM reports
+       WHERE reporter_id = $1 AND created_at > NOW() - INTERVAL '24 hours'`,
+      [req.user.id],
+    );
+    if (recent.rows[0].n >= MAX_REPORTS_PER_DAY) {
+      return res.status(429).json({
+        message: "You have sent a lot of reports today. Please try again tomorrow.",
+      });
+    }
+ 
+    // The target must exist and be visible on the public site
+    if (targetType === "business") {
+      const found = await pool.query(
+        "SELECT submitted_by FROM businesses WHERE id = $1 AND status = 'approved'",
+        [targetId],
+      );
+      if (found.rows.length === 0) {
+        return res.status(404).json({ message: "That business could not be found." });
+      }
+      if (found.rows[0].submitted_by === req.user.id) {
+        return res.status(400).json({
+          message: "You mapped this business yourself. Contact an admin if it needs to come down.",
+        });
+      }
+    } else {
+      const found = await pool.query(
+        `SELECT r.user_id
+         FROM reviews r
+         JOIN businesses b ON b.id = r.business_id
+         WHERE r.id = $1 AND NOT r.hidden AND b.status = 'approved'`,
+        [targetId],
+      );
+      if (found.rows.length === 0) {
+        return res.status(404).json({ message: "That review could not be found." });
+      }
+      if (found.rows[0].user_id === req.user.id) {
+        return res.status(400).json({ message: "You cannot report your own review." });
+      }
+    }
+ 
+    await pool.query(
+      `INSERT INTO reports (target_type, business_id, review_id, reporter_id, reason, details)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [
+        targetType,
+        targetType === "business" ? targetId : null,
+        targetType === "review" ? targetId : null,
+        req.user.id,
+        reason,
+        note || null,
+      ],
+    );
+ 
+    return res.status(201).json({ message: "Thanks. An admin will take a look." });
+  } catch (err) {
+    // The unique index: this person already has an open report on this target
+    if (err.code === "23505") {
+      return res.status(409).json({ message: "You have already reported this. An admin will look at it." });
+    }
+    console.error("REPORT ERROR:", err);
+    return res.status(500).json({ message: "Could not send your report." });
+  }
+});
+ 
+// GET: Open reports for admins, one row per reported listing or review
+route.get("/reports", protect, adminOnly, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      WITH grouped AS (
+        SELECT
+          r.target_type,
+          r.business_id,
+          r.review_id,
+          MIN(r.id)         AS report_id,
+          COUNT(*)::int     AS report_count,
+          MAX(r.created_at) AS last_reported,
+          json_agg(
+            json_build_object(
+              'reason', r.reason,
+              'details', r.details,
+              'reporter', u.first_name,
+              'created_at', r.created_at
+            ) ORDER BY r.created_at
+          ) AS reports
+        FROM reports r
+        JOIN users u ON u.id = r.reporter_id
+        WHERE r.status = 'open'
+        GROUP BY r.target_type, r.business_id, r.review_id
+      )
+      SELECT
+        g.*,
+        b.name        AS business_name,
+        b.status      AS business_status,
+        b.address_name,
+        b.image_url,
+        ST_Y(b.coordinates) AS lat,
+        ST_X(b.coordinates) AS lng,
+        rv.rating,
+        rv.comment,
+        rv.hidden     AS review_hidden,
+        CONCAT(ru.first_name, ' ', ru.last_name) AS review_author,
+        rb.id         AS review_business_id,
+        rb.name       AS review_business_name
+      FROM grouped g
+      LEFT JOIN businesses b  ON g.target_type = 'business' AND b.id = g.business_id
+      LEFT JOIN reviews rv    ON g.target_type = 'review'   AND rv.id = g.review_id
+      LEFT JOIN users ru      ON ru.id = rv.user_id
+      LEFT JOIN businesses rb ON rb.id = rv.business_id
+      ORDER BY g.report_count DESC, g.last_reported DESC
+    `);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("GET REPORTS ERROR:", err);
+    return res.status(500).json({ message: "Could not load reports." });
+  }
+});
+ 
+// PUT: Resolve a report. This closes every open report on the same
+// listing or review, so the queue shows each problem once.
+//   action "dismiss": nothing wrong, leave it as it is
+//   action "remove":  take the listing off the map, or hide the review
+route.put("/reports/:id/resolve", protect, adminOnly, async (req, res) => {
+  const id = parseId(req.params.id);
+  const { action } = req.body;
+ 
+  if (!id) {
+    return res.status(404).json({ message: "Report not found." });
+  }
+  if (action !== "dismiss" && action !== "remove") {
+    return res.status(400).json({ message: "Choose dismiss or remove." });
+  }
+ 
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+ 
+    const report = await client.query("SELECT * FROM reports WHERE id = $1 FOR UPDATE", [id]);
+    if (report.rows.length === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ message: "Report not found." });
+    }
+    const { target_type, business_id, review_id, status } = report.rows[0];
+    if (status !== "open") {
+      await client.query("ROLLBACK");
+      return res.status(409).json({ message: "This report was already handled." });
+    }
+ 
+    const isBusiness = target_type === "business";
+    const targetId = isBusiness ? business_id : review_id;
+    const targetColumn = isBusiness ? "business_id" : "review_id"; // fixed values, not user input
+ 
+    const open = await client.query(
+      `SELECT id, reason FROM reports
+       WHERE status = 'open' AND target_type = $1 AND ${targetColumn} = $2
+       FOR UPDATE`,
+      [target_type, targetId],
+    );
+ 
+    if (action === "remove") {
+      if (isBusiness) {
+        // Most common reason wins; it is what the contributor will read
+        const counts = {};
+        open.rows.forEach((r) => {
+          counts[r.reason] = (counts[r.reason] || 0) + 1;
+        });
+        const topReason = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+ 
+        await client.query(
+          "UPDATE businesses SET status = 'rejected', rejection_reason = $1 WHERE id = $2",
+          [BUSINESS_TAKEDOWN_TEXT[topReason] || BUSINESS_TAKEDOWN_TEXT.other, targetId],
+        );
+      } else {
+        await client.query("UPDATE reviews SET hidden = TRUE WHERE id = $1", [targetId]);
+      }
+    }
+ 
+    await client.query(
+      `UPDATE reports
+       SET status = $1, resolved_by = $2, resolved_at = NOW()
+       WHERE id = ANY($3::int[])`,
+      [action === "remove" ? "actioned" : "dismissed", req.user.id, open.rows.map((r) => r.id)],
+    );
+ 
+    await client.query("COMMIT");
+    return res.json({
+      message: action === "remove" ? "Done. It has been removed." : "Report dismissed.",
+      resolved: open.rows.length,
+    });
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    console.error("RESOLVE REPORT ERROR:", err);
+    return res.status(500).json({ message: "Could not update this report." });
+  } finally {
+    client.release();
+  }
+});
+ 
+
 export default route;
