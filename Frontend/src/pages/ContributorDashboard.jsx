@@ -72,6 +72,12 @@ function ContributorDashboard() {
         <div className="flex justify-between items-center text-white mb-6">
           <h1 className="text-2xl font-black italic">Indawo</h1>
           <button 
+            onClick={()=> navigate('/map')}
+           className="bg-white hover:bg-blue-50 text-blue-600 font-bold py-2 px-4 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200 shadow-sm"
+          >
+           Go to Map
+          </button>
+          <button 
             onClick={handleLogout}
            className="bg-white hover:bg-red-50 text-red-600 font-bold py-2 px-4 rounded-lg text-sm transition-colors border border-gray-200 hover:border-red-200 shadow-sm"
           >
