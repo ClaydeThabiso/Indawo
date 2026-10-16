@@ -187,7 +187,7 @@ route.get("/my-impact", protect, async (req, res) => {
 
     // 1. Get the user's name (Make sure the column matches your users table, e.g., 'name' or 'username')
     const userQuery = await pool.query("SELECT first_name FROM users WHERE id = $1", [userId]);
-    const userName = userQuery.rows.length > 0 ? userQuery.rows[0].name : "Scout";
+    const userName = userQuery.rows.length > 0 ? userQuery.rows[0].first_name : "Scout";
 
     // 2. Get all businesses submitted by this specific user
     const submissionsQuery = await pool.query(

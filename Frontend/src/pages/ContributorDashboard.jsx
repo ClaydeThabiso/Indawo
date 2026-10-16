@@ -85,7 +85,7 @@ function ContributorDashboard() {
           </button>
         </div>
         <p className="text-blue-200 text-sm font-medium uppercase tracking-wider">Welcome Back</p>
-        <h2 className="text-white text-3xl font-bold">{userStats.first_name}</h2>
+        <h2 className="text-white text-3xl font-bold">{userStats.name}</h2>
       </div>
 
       {/* 2. The Massive CTA Button */}
