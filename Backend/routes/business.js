@@ -279,7 +279,7 @@ route.get("/business-reviews/:business_id", async (req, res) => {
 
     // 1. Get all reviews joined with the users table so we can display their real names
     const reviewsList = await pool.query(
-      `SELECT r.id, r.rating, r.comment, r.created_at, u.name AS reviewer_name 
+      `SELECT r.id, r.rating, r.comment, r.created_at, u.first_name AS reviewer_name 
        FROM reviews r
        JOIN users u ON r.user_id = u.id
        WHERE r.business_id = $1
