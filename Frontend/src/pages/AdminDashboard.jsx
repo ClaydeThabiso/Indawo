@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import toast from 'react-hot-toast'; 
+import toast from 'react-hot-toast'; // The beautiful notification library!
 
 function AdminDashboard() {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate(); // The navigation hook fix
 
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -133,9 +133,11 @@ function AdminDashboard() {
                       <span className="bg-[#FDBA31] text-[#1D4A79] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
                         {biz.category_name}
                       </span>
-                       <span className="bg-[#FDBA31] text-[#1D4A79] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-                        {biz.address_name}
-                      </span>
+                      {biz.resubmit_count > 0 && (
+                        <span className="ml-2 bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          Resubmitted
+                        </span>
+                      )}
                     </div>
                     <button 
                       onClick={() => { setSelectedBiz(biz); setIsRejecting(false); }}
@@ -182,6 +184,19 @@ function AdminDashboard() {
                   </div>
                 )}
               </div>
+
+              {selectedBiz.resubmit_count > 0 && (
+                <div className="mb-4 bg-blue-50 border border-blue-100 rounded-xl p-3 text-sm text-blue-900">
+                  <p className="font-bold">
+                    Resubmitted {selectedBiz.resubmit_count} {selectedBiz.resubmit_count === 1 ? 'time' : 'times'}
+                  </p>
+                  {selectedBiz.last_rejection_reason && (
+                    <p className="mt-1">
+                      <span className="font-bold">Earlier rejection:</span> {selectedBiz.last_rejection_reason}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <h2 className="text-2xl font-black text-[#1D4A79] leading-tight">{selectedBiz.business_name}</h2>
               <p className="text-sm font-bold text-gray-500 mb-4">{selectedBiz.address_name}</p>
