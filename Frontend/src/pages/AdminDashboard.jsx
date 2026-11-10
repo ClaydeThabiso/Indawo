@@ -1,7 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast'; // The beautiful notification library!
+import { REASON_LABELS } from '../constants/reportReasons';
+
+// "Closed x2, Duplicate" from a list of reports on one listing or review
+const summariseReasons = (reports) => {
+  const counts = {};
+  reports.forEach((r) => { counts[r.reason] = (counts[r.reason] || 0) + 1; });
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([reason, n]) => ({ label: REASON_LABELS[reason] || reason, n }));
+};
+
+const formatReportDate = (value) =>
+  value ? new Date(value).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '';
 
 function AdminDashboard() {
   const navigate = useNavigate(); // The navigation hook fix
@@ -13,6 +26,56 @@ function AdminDashboard() {
   const [selectedBiz, setSelectedBiz] = useState(null);
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Reports from the community
+  const [reports, setReports] = useState([]);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState("");
+  const [confirmingId, setConfirmingId] = useState(null); // report_id waiting for "Confirm"
+  const [resolvingId, setResolvingId] = useState(null);   // report_id being saved
+
+  const fetchReports = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/business/reports", {
+        withCredentials: true
+      });
+      setReports(res.data);
+      setReportsError("");
+    } catch (err) {
+      console.error("Error fetching reports:", err);
+      setReportsError(
+        err.response?.status === 403
+          ? "Only admins can see reports."
+          : "Could not load reports. Try refreshing the page."
+      );
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  const handleResolveReport = async (item, action) => {
+    setResolvingId(item.report_id);
+    const loadingToast = toast.loading(action === "remove" ? "Removing..." : "Dismissing...");
+    try {
+      const res = await axios.put(
+        `http://localhost:5000/api/business/reports/${item.report_id}/resolve`,
+        { action },
+        { withCredentials: true }
+      );
+      toast.success(res.data.message, { id: loadingToast });
+      setConfirmingId(null);
+      // Removing a listing can change the pending list too, so reload both
+      fetchReports();
+      fetchPending();
+    } catch (err) {
+      console.error("Error resolving report:", err);
+      toast.error(err.response?.data?.message || "Could not update this report.", { id: loadingToast });
+      // Someone else may have handled it already, so show the latest queue
+      if (err.response?.status === 409 || err.response?.status === 404) fetchReports();
+    } finally {
+      setResolvingId(null);
+    }
+  };
 
   const fetchPending = async () => {
     try {
@@ -30,6 +93,7 @@ function AdminDashboard() {
 
   useEffect(() => {
     fetchPending();
+    fetchReports();
   }, []);
 
   const handleLogout = async () => {
@@ -148,6 +212,156 @@ function AdminDashboard() {
                   </div>
                 ))}
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Reports from the community */}
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-[#1D4A79] px-6 py-4 flex items-center justify-between gap-3">
+            <h2 className="text-white font-bold">Reports ({reports.length})</h2>
+            <span className="text-blue-100 text-xs">Most reported first</span>
+          </div>
+
+          <div className="p-6">
+            {reportsLoading ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1D4A79]"></div>
+              </div>
+            ) : reportsError ? (
+              <p className="text-center text-sm text-red-600 font-bold py-6">{reportsError}</p>
+            ) : reports.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-[#1D4A79] font-bold text-lg">No open reports</p>
+                <p className="text-gray-500 text-sm mt-1">Nothing has been flagged by the community.</p>
+              </div>
+            ) : (
+              <ul className="space-y-4">
+                {reports.map((item) => {
+                  const isBusiness = item.target_type === 'business';
+                  const reasons = summariseReasons(item.reports);
+                  const notes = item.reports.filter((r) => r.details);
+                  const busy = resolvingId === item.report_id;
+                  const confirming = confirmingId === item.report_id;
+                  const canRemove = isBusiness ? item.business_status === 'approved' : !item.review_hidden;
+                  const pageId = isBusiness ? item.business_id : item.review_business_id;
+
+                  return (
+                    <li key={`${item.target_type}-${item.report_id}`} className="border border-gray-100 rounded-lg bg-slate-50 p-4">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <span className="bg-[#FDBA31] text-[#1D4A79] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {isBusiness ? 'Listing' : 'Review'}
+                        </span>
+                        <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          {item.report_count} {item.report_count === 1 ? 'report' : 'reports'}
+                        </span>
+                        <span className="text-xs text-gray-400">Latest {formatReportDate(item.last_reported)}</span>
+                      </div>
+
+                      {isBusiness ? (
+                        <div className="flex gap-3">
+                          {item.image_url && (
+                            <img src={item.image_url} alt="" className="w-16 h-16 rounded-lg object-cover shrink-0 bg-gray-200" />
+                          )}
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-[#1D4A79] break-words">{item.business_name}</h3>
+                            <p className="text-sm text-gray-500 break-words">{item.address_name}</p>
+                            {item.business_status !== 'approved' && (
+                              <p className="text-xs font-bold text-gray-500 mt-1">Not on the map right now ({item.business_status}).</p>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-sm text-gray-900 font-bold">
+                            {item.review_author} <span className="text-[#FDBA31]" aria-hidden="true">★</span> {item.rating}/5
+                          </p>
+                          <p className="mt-1 text-sm text-gray-700 bg-white border border-gray-100 rounded-lg p-3 break-words whitespace-pre-line">
+                            {item.comment || 'No comment, rating only.'}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">On {item.review_business_name}</p>
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {reasons.map((r) => (
+                          <span key={r.label} className="bg-white border border-gray-200 text-gray-700 text-xs font-bold px-2 py-1 rounded-md">
+                            {r.label}{r.n > 1 ? ` x${r.n}` : ''}
+                          </span>
+                        ))}
+                      </div>
+
+                      {notes.length > 0 && (
+                        <ul className="mt-3 space-y-2">
+                          {notes.map((r, i) => (
+                            <li key={i} className="text-sm text-gray-600 border-l-2 border-gray-300 pl-3 break-words">
+                              {r.details}
+                              <span className="block text-xs text-gray-400">{r.reporter}, {formatReportDate(r.created_at)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        {pageId && (
+                          <Link
+                            to={`/business/${pageId}`}
+                            target="_blank"
+                            className="text-sm font-bold text-[#1D4A79] underline hover:text-[#FDBA31] mr-auto"
+                          >
+                            Open page
+                          </Link>
+                        )}
+
+                        {confirming ? (
+                          <>
+                            <span className="text-sm font-bold text-red-700">
+                              {isBusiness ? 'Take this listing off the map?' : 'Hide this review?'}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleResolveReport(item, 'remove')}
+                              className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors disabled:opacity-50"
+                            >
+                              Yes, remove
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => setConfirmingId(null)}
+                              className="bg-white border border-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleResolveReport(item, 'dismiss')}
+                              className="bg-white border border-gray-200 text-gray-700 font-bold py-2 px-4 rounded-md text-sm hover:bg-gray-100 transition-colors disabled:opacity-50"
+                            >
+                              Dismiss
+                            </button>
+                            {canRemove && (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => setConfirmingId(item.report_id)}
+                                className="bg-red-50 hover:bg-red-100 border border-red-100 text-red-600 font-bold py-2 px-4 rounded-md text-sm transition-colors disabled:opacity-50"
+                              >
+                                {isBusiness ? 'Take down listing' : 'Hide review'}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </div>
